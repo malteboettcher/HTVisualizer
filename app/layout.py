@@ -1,11 +1,11 @@
 import plotly.express as px
 from dash import dcc, html
 
-from .data_loader import load_expression_data
+from .data_loader import load_annotation_data
 
 
 def create_layout():
-    df = load_expression_data("data/example_data.csv")
+    df = load_annotation_data("data/example_data.csv")
     fig = px.bar(df, x="gene", y="expression", title="Expression Values")
 
     layout = html.Div(children=[
