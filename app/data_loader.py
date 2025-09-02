@@ -25,4 +25,5 @@ def load_quant_data(filepath: str) -> pd.DataFrame:
 
         df = pd.concat([df, quant_df], axis=1)
 
-    return df
+    agg_df = df.T.groupby(lambda x: "_".join(x.split("_")[:-1])).agg(['mean', 'std']).T
+    return agg_df
