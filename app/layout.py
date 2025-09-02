@@ -1,21 +1,27 @@
-import plotly.express as px
+import pandas as pd
 from dash import dcc, html
 
-from .data_loader import load_annotation_data
+from .data_loader import load_annotation_data, load_quant_data
 
 
-def create_layout():
-    df = load_annotation_data("data/example_data.csv")
-    fig = px.bar(df, x="gene", y="expression", title="Expression Values")
+def create_layout(annotation_path, expression_path):
+    annotation_data = load_annotation_data(annotation_path)
+    expression_data = load_quant_data(expression_path)
+    # fig = px.bar(expression_data)
 
     layout = html.Div(children=[
-        html.H1("High-Throughput Expression Dashboard"),
-        dcc.Graph(id="expression-plot", figure=fig),
+        html.H1("RNA-seq transcript expression Dashboard"),
         dcc.Dropdown(
             id="gene-selector",
-            options=[{"label": g, "value": g} for g in df["gene"].unique()],
-            multi=True,
-            placeholder="Select genes..."
+            options=[
+                {"label": f"{row['AGI']}; "
+                          f"{row['Name'] if pd.notna(row['Name'])else 'Unknown'}",
+                 "value": row['AGI']}
+                for _, row in annotation_data.iterrows()
+            ],
+            searchable=True,
+            placeholder="Select gene..."
         ),
+        dcc.Graph(id="expression-plot"),
     ])
     return layout
