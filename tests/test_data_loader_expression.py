@@ -3,7 +3,7 @@ import math
 import numpy as np
 import pytest
 
-from app.data_loader import load_quant_data
+from app.data_loader import ExpressionDataManager
 
 folders = {
     "1ko_LL18": [
@@ -29,23 +29,27 @@ def temp_folder_with_structure(tmp_path):
                 "Name\tLength\tEffectiveLength\tTPM\tNumReads\n"
                 f"{data['AGI']}\t1749\t1430.305\t{data['TPM']}\t24"
             )
-            if folder_name == "1ox_LL24_1":
+            if f"{folder_name}_1" == "1ox_LL24_1":
                 content += f"\nAT1G01010.2\t1749\t1430.305\t{data['TPM']}\t24"
             (folder / "quant.sf").write_text(content)
 
     return tmp_path
 
-
+@pytest.fixture(autouse=True)
+def reset_singleton():
+    ExpressionDataManager._instance = None
 
 def test_parse_correct_genotypes_and_ll(temp_folder_with_structure):
-    df = load_quant_data(str(temp_folder_with_structure))
+    manager = ExpressionDataManager(None, str(temp_folder_with_structure))
+    df = manager.load_quant_data()
 
     for folder_name, _ in folders.items():
         assert folder_name in df.columns
 
 
 def test_parse_correct_values_for_gene_isoform(temp_folder_with_structure):
-    df = load_quant_data(str(temp_folder_with_structure))
+    manager = ExpressionDataManager(None, str(temp_folder_with_structure))
+    df = manager.load_quant_data()
 
     for sample_name, samples in folders.items():
         tpms = [sample["TPM"] for sample in samples]
@@ -59,3 +63,29 @@ def test_parse_correct_values_for_gene_isoform(temp_folder_with_structure):
 
         assert df.loc[(samples[0]["AGI"], "mean"), sample_name] == avg_tpm
 
+def test_get_isoforms_for_gene(temp_folder_with_structure):
+    manager = ExpressionDataManager(None, str(temp_folder_with_structure))
+    manager.load_quant_data()
+
+    isoforms = manager.get_isoforms_for_gene("AT1G01010")
+    assert set(isoforms) == {"AT1G01010.1", "AT1G01010.2"}
+
+def test_get_sample_groups(temp_folder_with_structure):
+    manager = ExpressionDataManager(None, str(temp_folder_with_structure))
+    manager.load_quant_data()
+    sample_groups = manager.get_sample_groups()
+
+    assert set(sample_groups) == {"1ko_LL18", "1ko_LL24", "1ox_LL18", "1ox_LL24"}
+
+
+def test_get_groups_by_genotype(temp_folder_with_structure):
+    manager = ExpressionDataManager(None, str(temp_folder_with_structure))
+    manager.load_quant_data()
+    groups_by_type = manager.get_groups_by_genotype()
+
+    expected = {
+        "1ko": ["1ko_LL18", "1ko_LL24"],
+        "1ox": ["1ox_LL18", "1ox_LL24"]
+    }
+
+    assert groups_by_type == expected
