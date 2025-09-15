@@ -1,12 +1,13 @@
 import argparse
 
+import dash_bootstrap_components as dbc
 from dash import Dash
 
 from app.layout import create_layout
 
 
 def main(annotation_path, expression_path, host="127.0.0.1", port=8050, debug=True):
-    app = Dash(__name__)
+    app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
     app.layout = create_layout(annotation_path, expression_path)
     app.run(host=host, port=port, debug=debug)
 

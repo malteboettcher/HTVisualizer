@@ -30,7 +30,8 @@ def temp_folder_with_structure(tmp_path):
                 f"{data['AGI']}\t1749\t1430.305\t{data['TPM']}\t24"
             )
             if f"{folder_name}_1" == "1ox_LL24_1":
-                content += f"\nAT1G01010.2\t1749\t1430.305\t{data['TPM']}\t24"
+                content += f"\nAT1G01010.2\t1749\t1430.305\t{data['TPM']}\t24\n"
+                content += f"\nAT1G01010-AT1G01020.1\t1749\t1430.305\t{data['TPM']}\t24"
             (folder / "quant.sf").write_text(content)
 
     return tmp_path
@@ -68,7 +69,8 @@ def test_get_isoforms_for_gene(temp_folder_with_structure):
     manager.load_quant_data()
 
     isoforms = manager.get_isoforms_for_gene("AT1G01010")
-    assert set(isoforms) == {"AT1G01010.1", "AT1G01010.2"}
+    assert set(isoforms) == {"AT1G01010", 'AT1G01010-AT1G01020.1', "AT1G01010.1",
+                             "AT1G01010.2"}
 
 def test_get_sample_groups(temp_folder_with_structure):
     manager = ExpressionDataManager(None, str(temp_folder_with_structure))
@@ -89,3 +91,32 @@ def test_get_groups_by_genotype(temp_folder_with_structure):
     }
 
     assert groups_by_type == expected
+
+def test_gene_isoform_aggregation_row_added(temp_folder_with_structure):
+    manager = ExpressionDataManager(None, str(temp_folder_with_structure))
+    df = manager.load_quant_data()
+
+    gene_id = "AT1G01010"
+
+    isoform_names = manager.get_isoforms_for_gene(gene_id)
+
+    assert "AT1G01010.1" in isoform_names, "Individual isoform AT1G01010.1 not found"
+    assert "AT1G01010.2" in isoform_names, "Individual isoform AT1G01010.2 not found"
+    assert "AT1G01010-AT1G01020.1" in isoform_names, \
+        "Individual isoform AT1G01010.2 not found"
+
+    sample_with_multiple_isoforms = "1ox_LL24"
+
+    if sample_with_multiple_isoforms in df.columns:
+
+        gene_mean = df.loc[(gene_id, "mean"), sample_with_multiple_isoforms]
+
+        isoform1_mean = df.loc[("AT1G01010.1", "mean"), sample_with_multiple_isoforms]
+        isoform2_mean = df.loc[("AT1G01010.2", "mean"), sample_with_multiple_isoforms]
+        isoform3_mean = df.loc[("AT1G01010-AT1G01020.1", "mean"),
+                                sample_with_multiple_isoforms]
+
+        expected_gene_total = isoform1_mean + isoform2_mean + isoform3_mean
+        assert np.isclose(gene_mean, expected_gene_total, rtol=1e-8, atol=1e-10), \
+            (f"Gene-level aggregation incorrect: expected "
+             f"{expected_gene_total}, got {gene_mean}")

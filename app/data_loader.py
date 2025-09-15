@@ -44,8 +44,8 @@ class ExpressionDataManager:
             raise ValueError("Path to quantification data is not set.")
 
         if self._expression_data is None:
-            df = pd.DataFrame()
 
+            dfs = []
             path = Path(self._quant_path)
             for directory in path.iterdir():
                 quant_file = directory / "quant.sf"
@@ -54,13 +54,25 @@ class ExpressionDataManager:
                 quant_df = quant_df[["Name", "TPM"]].set_index("Name")
 
                 quant_df.rename(columns={"TPM": directory.name}, inplace=True)
+                dfs.append(quant_df)
 
-                df = pd.concat([df, quant_df], axis=1)
+            df = pd.concat(dfs, axis=1)
 
-            self._expression_data = (df.T
-                                     .groupby(lambda x: "_".join(x.split("_")[:-1]))
+            gene_index = gene_index = pd.Series(
+                df.index,index=df.index
+            ).str.split(r"[-.]", n=1).str[0]
+            gene_df = df.groupby(gene_index).sum()
+            expanded_df = pd.concat([df, gene_df])
+
+            sample_groups = [c.rsplit("_", 1)[0] for c in expanded_df.columns]
+
+            grouper = pd.Series(sample_groups, index=expanded_df.columns)
+
+            expanded_df = (expanded_df.T
+                                     .groupby(grouper)
                                      .agg(['mean', 'std'])
                                      .T)
+            self._expression_data = expanded_df
 
         return self._expression_data
 
