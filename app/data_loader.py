@@ -58,9 +58,10 @@ class ExpressionDataManager:
 
             df = pd.concat(dfs, axis=1)
 
-            gene_index = gene_index = pd.Series(
-                df.index,index=df.index
-            ).str.split(r"[-.]", n=1).str[0]
+            df = df.loc[~df.index.str.contains("-") & df.index.str.startswith("A")]
+
+            gene_index = df.index.to_series().str.split(r"[.]", n=1).str[0]
+
             gene_df = df.groupby(gene_index).sum()
             expanded_df = pd.concat([df, gene_df])
 

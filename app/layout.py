@@ -1,3 +1,4 @@
+import base64
 
 import dash_bootstrap_components as dbc
 import pandas as pd
@@ -40,14 +41,48 @@ def create_layout(annotation_path, expression_path):
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
-                            html.Label("Gene Selection", className="form-label fw-bold mb-2"),
+                            html.Label("Gene Selection",
+                                       className="form-label fw-bold mb-2"),
                             dcc.Dropdown(
                                 id="gene-selector",
                                 options=dropdown_options,
                                 searchable=True,
                                 placeholder="Type to search genes...",
                                 className="mb-0"
-                            )
+                            ),
+                            html.Label("Export Options",
+                                       className="form-label fw-bold mb-2 mt-2"),
+                            html.Div(
+                                dbc.ButtonGroup([
+                                    dbc.Button(
+                                        [html.I(className="fas fa-download me-2"), "SVG"],
+                                        id="download-svg-btn",
+                                        color="outline-primary",
+                                        size="sm",
+                                        className="mb-2 w-100",
+                                        disabled=True
+                                    ),
+                                    dbc.Button(
+                                        [html.I(className="fas fa-download me-2"), "PNG"],
+                                        id="download-png-btn",
+                                        color="outline-secondary",
+                                        size="sm",
+                                        className="mb-2 w-100",
+                                        disabled=True
+                                    ),
+                                    dbc.Button(
+                                        [html.I(className="fas fa-download me-2"), "PDF"],
+                                        id="download-pdf-btn",
+                                        color="outline-success",
+                                        size="sm",
+                                        className="mb-2 w-100",
+                                        disabled=True
+                                    ),
+                                ], size="sm"),
+                            ),
+                            dcc.Download(id="download-svg"),
+                            dcc.Download(id="download-png"),
+                            dcc.Download(id="download-pdf"),
                         ])
                     ], className="shadow-sm border-0")
                 ], width=12, lg=3, className="mb-3"),
@@ -115,17 +150,20 @@ def update_expression_plot(selected_gene):
 
     x_positions_map = _get_x_positions(groups_by_type)
 
+    all_y = []
     for i, isoform in enumerate(matching_isoforms):
         first_of_type = True
         for _, cols in groups_by_type.items():
             x_values = []
             y_values = []
             error_values = []
-
             for group in cols:
+                mean = expression_data.loc[(isoform, "mean"), group]
+                error = expression_data.loc[(isoform, "std"), group]
+                all_y.extend([mean + error, mean - error])
                 x_values.append(x_positions_map[group])
-                y_values.append(expression_data.loc[(isoform, "mean"), group])
-                error_values.append(expression_data.loc[(isoform, "std"), group])
+                y_values.append(mean)
+                error_values.append(error)
 
             fig.add_trace(go.Scatter(
                 x=x_values,
@@ -144,6 +182,8 @@ def update_expression_plot(selected_gene):
             ))
             first_of_type = False
 
+    ymax = max(0, max(all_y) * 1.1)
+    ymin = min(0 - max(all_y) * 0.05, min(all_y) * 1.1)
     fig.update_layout(
         title=f'Expression Profile: {selected_gene}',
         yaxis_title="mean/SD TPM",
@@ -156,6 +196,8 @@ def update_expression_plot(selected_gene):
             color='black',
             zerolinecolor="lightgray",
             zerolinewidth=1,
+            autorange=False,
+            range=[ymin, ymax]
         ),
         xaxis=dict(
             tickvals=[x_positions_map[s] for s in sample_groups],
@@ -214,19 +256,17 @@ def _empty_fig(message: str = "No data to display"):
 )
 def download_svg(n_clicks, figure, selected_gene):
     if n_clicks and figure:
-        # Create figure from the stored figure data
         fig = go.Figure(figure)
 
-        # Generate SVG
-        svg_string = pio.to_image(fig, format="svg", width=800, height=600)
+        svg_string = pio.to_image(fig, format="svg", width=1000, height=400)
+        svg_b64 = base64.b64encode(svg_string).decode('utf-8')
 
-        # Create filename
         filename = f"expression_plot_{selected_gene or 'plot'}.svg"
 
-        return dict(content=svg_string, filename=filename, type="image/svg+xml")
+        return dict(content=svg_b64, filename=filename, type="image/svg+xml",
+                    base64=True)
 
 
-# Callback for PDF download
 @callback(
     Output("download-pdf", "data"),
     Input("download-pdf-btn", "n_clicks"),
@@ -236,14 +276,45 @@ def download_svg(n_clicks, figure, selected_gene):
 )
 def download_pdf(n_clicks, figure, selected_gene):
     if n_clicks and figure:
-        # Create figure from the stored figure data
         fig = go.Figure(figure)
 
-        # Generate PDF
-        pdf_bytes = pio.to_image(fig, format="pdf", width=800, height=600)
+        pdf_bytes = pio.to_image(fig, format="pdf", width=1000, height=400)
+        pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
 
-        # Create filename
         filename = f"expression_plot_{selected_gene or 'plot'}.pdf"
 
-        return dict(content=pdf_bytes, filename=filename, type="application/pdf")
+        return dict(content=pdf_b64, filename=filename, type="application/pdf",
+                    base64=True)
+
+
+@callback(
+    Output("download-png", "data"),
+    Input("download-png-btn", "n_clicks"),
+    State("expression-plot", "figure"),
+    State("gene-selector", "value"),
+    prevent_initial_call=True
+)
+def download_png(n_clicks, figure, selected_gene):
+    if n_clicks and figure:
+        fig = go.Figure(figure)
+
+        png_bytes = pio.to_image(fig, format="png", width=1000, height=400, scale=2)
+        png_b64 = base64.b64encode(png_bytes).decode('utf-8')
+
+        filename = f"expression_plot_{selected_gene or 'plot'}.png"
+
+        return dict(content=png_b64, filename=filename, type="image/png",
+                    base64=True)
+
+
+@callback(
+    Output("download-svg-btn", "disabled"),
+    Output("download-png-btn", "disabled"),
+    Output("download-pdf-btn", "disabled"),
+    Input("gene-selector", "value")
+)
+def toggle_download_buttons(selected_gene):
+    if not selected_gene:
+        return True, True, True
+    return False, False, False
 
