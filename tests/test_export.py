@@ -1,3 +1,4 @@
+import base64
 from unittest.mock import patch
 
 import plotly.graph_objects as go
@@ -45,15 +46,15 @@ def test_download_svg_success(mock_to_image, sample_figure):
     result = download_svg(1, sample_figure, sample_gene)
 
     assert isinstance(result, dict)
-    assert result['content'] == mock_svg_content
+    assert result['content'] == base64.b64encode(mock_svg_content).decode()
     assert result['filename'] == f"expression_plot_{sample_gene}.svg"
     assert result['type'] == "image/svg+xml"
 
     mock_to_image.assert_called_once()
     call_args = mock_to_image.call_args
     assert call_args[1]['format'] == 'svg'
-    assert call_args[1]['width'] == 1600
-    assert call_args[1]['height'] == 550
+    assert call_args[1]['width'] == 1000
+    assert call_args[1]['height'] == 400
 
 @patch('plotly.io.to_image')
 def test_download_svg_no_gene_name(mock_to_image, sample_figure):
@@ -85,15 +86,15 @@ def test_download_png_success(mock_to_image, sample_figure):
     result = download_png(1, sample_figure, sample_gene)
 
     assert isinstance(result, dict)
-    assert result['content'] == mock_png_content
+    assert result['content'] == base64.b64encode(mock_png_content).decode()
     assert result['filename'] == f"expression_plot_{sample_gene}.png"
     assert result['type'] == "image/png"
 
     mock_to_image.assert_called_once()
     call_args = mock_to_image.call_args
     assert call_args[1]['format'] == 'png'
-    assert call_args[1]['width'] == 1600
-    assert call_args[1]['height'] == 550
+    assert call_args[1]['width'] == 1000
+    assert call_args[1]['height'] == 400
     assert call_args[1]['scale'] == 2
 
 @patch('plotly.io.to_image')
@@ -125,15 +126,15 @@ def test_download_pdf_success(mock_to_image, sample_figure):
     result = download_pdf(1, sample_figure, sample_gene)
 
     assert isinstance(result, dict)
-    assert result['content'] == mock_pdf_content
+    assert result['content'] == base64.b64encode(mock_pdf_content).decode()
     assert result['filename'] == f"expression_plot_{sample_gene}.pdf"
     assert result['type'] == "application/pdf"
 
     mock_to_image.assert_called_once()
     call_args = mock_to_image.call_args
     assert call_args[1]['format'] == 'pdf'
-    assert call_args[1]['width'] == 1600
-    assert call_args[1]['height'] == 550
+    assert call_args[1]['width'] == 1000
+    assert call_args[1]['height'] == 400
 
 @patch('plotly.io.to_image')
 def test_download_pdf_no_gene_name(mock_to_image, sample_figure):

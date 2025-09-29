@@ -18,7 +18,6 @@ def create_layout(annotation_path, expression_path):
     data_manager.load_quant_data()
 
     fig = _empty_fig()
-
     dropdown_options = [
         {
             "label":
@@ -55,7 +54,8 @@ def create_layout(annotation_path, expression_path):
                             html.Div(
                                 dbc.ButtonGroup([
                                     dbc.Button(
-                                        [html.I(className="fas fa-download me-2"), "SVG"],
+                                        [html.I(className="fas fa-download me-2"),
+                                         "SVG"],
                                         id="download-svg-btn",
                                         color="outline-primary",
                                         size="sm",
@@ -63,7 +63,8 @@ def create_layout(annotation_path, expression_path):
                                         disabled=True
                                     ),
                                     dbc.Button(
-                                        [html.I(className="fas fa-download me-2"), "PNG"],
+                                        [html.I(className="fas fa-download me-2"),
+                                         "PNG"],
                                         id="download-png-btn",
                                         color="outline-secondary",
                                         size="sm",
@@ -71,7 +72,8 @@ def create_layout(annotation_path, expression_path):
                                         disabled=True
                                     ),
                                     dbc.Button(
-                                        [html.I(className="fas fa-download me-2"), "PDF"],
+                                        [html.I(className="fas fa-download me-2"),
+                                         "PDF"],
                                         id="download-pdf-btn",
                                         color="outline-success",
                                         size="sm",
@@ -117,7 +119,6 @@ def create_layout(annotation_path, expression_path):
                 ], width=12, lg=9)
             ], className="g-3"),
 
-            # Invisible spacer for better bottom padding
             html.Div(style={"height": "20px"})
         ], fluid=True, className="px-3")
     ])
@@ -252,7 +253,14 @@ def _empty_fig(message: str = "No data to display"):
     Input("download-svg-btn", "n_clicks"),
     State("expression-plot", "figure"),
     State("gene-selector", "value"),
-    prevent_initial_call=True
+    prevent_initial_call=True,
+    running=[
+        (Output("download-svg-btn", "disabled"), True, False),
+        (Output("download-svg-btn", "children"),
+         [dbc.Spinner(size="sm", color="primary"),
+          html.Span("Downloading...")],
+         [html.I(className="fas fa-download me-2"), "SVG"]),
+    ],
 )
 def download_svg(n_clicks, figure, selected_gene):
     if n_clicks and figure:
@@ -272,7 +280,14 @@ def download_svg(n_clicks, figure, selected_gene):
     Input("download-pdf-btn", "n_clicks"),
     State("expression-plot", "figure"),
     State("gene-selector", "value"),
-    prevent_initial_call=True
+    prevent_initial_call=True,
+    running=[
+        (Output("download-pdf-btn", "disabled"), True, False),
+        (Output("download-pdf-btn", "children"),
+         [dbc.Spinner(size="sm", color="primary"),
+          html.Span("Downloading...")],
+         [html.I(className="fas fa-download me-2"), "PDF"]),
+    ],
 )
 def download_pdf(n_clicks, figure, selected_gene):
     if n_clicks and figure:
@@ -292,7 +307,14 @@ def download_pdf(n_clicks, figure, selected_gene):
     Input("download-png-btn", "n_clicks"),
     State("expression-plot", "figure"),
     State("gene-selector", "value"),
-    prevent_initial_call=True
+    prevent_initial_call=True,
+    running=[
+        (Output("download-png-btn", "disabled"), True, False),
+        (Output("download-png-btn", "children"),
+         [dbc.Spinner(size="sm", color="primary"),
+          html.Span("Downloading...")],
+         [html.I(className="fas fa-download me-2"), "PNG"]),
+    ],
 )
 def download_png(n_clicks, figure, selected_gene):
     if n_clicks and figure:
@@ -303,8 +325,8 @@ def download_png(n_clicks, figure, selected_gene):
 
         filename = f"expression_plot_{selected_gene or 'plot'}.png"
 
-        return dict(content=png_b64, filename=filename, type="image/png",
-                    base64=True)
+        return dict(content=png_b64, filename=filename, type="image/png", base64=True)
+
 
 
 @callback(
