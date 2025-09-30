@@ -8,7 +8,7 @@ This project provides an interactive web-based dashboard for visualizing RNA-seq
 - **Expression Visualization:** Plot mean and standard deviation (TPM) across sample groups and different isoforms.  
 - **Export Options:** Download plots as SVG, PNG, or PDF.
 
-## Installation
+## Installation (from sources)
 
 1. Clone the repository:
 ```bash
@@ -84,6 +84,41 @@ The following conventions are assumed for the application:
       ```
       - *Assumption*: The dashboard will recursively read each folder under the expression data path for ```quant.sf``` files.
    
+## Installation (Docker)
+
+1. Build the Docker image
+
+    ```bash
+    docker-compose build
+   ```
+2. Run the app
+   ```bash
+    docker-compose up
+   ```
+This will start the app inside the container
+3. Access the app
+   - From your hist machine (localhost):
+   Open your browser at:
+   ```aiignore
+    http://127.0.0.1:8050
+   ```
+   - From another device on the same network:
+     1. Find your host's LAN IP address:
+     ```aiignore
+      ip addr show   # Linux 
+      ipconfig       # Windows
+     ```
+     2. Open on another device:
+     ```aiignore
+      http://<device-ip>:8050
+     ```
+4. Data mounting
+
+    The ```./data``` folder in your project is automatically mounted into the container at ```/app/data```.
+   - Place your annotation CSV and expression folders there
+   - You can replace files in ```./data``` without rebuilding the Docker image
+
+
 ## Usage
 Run the Dash application from the command line:
     ```bash
